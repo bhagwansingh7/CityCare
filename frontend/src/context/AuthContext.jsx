@@ -1,0 +1,56 @@
+import { createContext, useContext, useEffect, useState } from 'react';
+import api from '../api/axios';
+
+const AuthContext = createContext(null);
+export const useAuth = () => useContext(AuthContext);
+
+export const roleHome = {
+  admin: '/admin',
+  doctor: '/doctor',
+  receptionist: '/receptionist',
+  billing: '/billing',
+  patient: '/patient',
+};
+
+export const roleLabel = {
+  admin: 'Administrator',
+  doctor: 'Doctor',
+  receptionist: 'Receptionist',
+  billing: 'Billing staff',
+  patient: 'Patient',
+};
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // On first load, ask the server whether the cookie still identifies a logged-in user.
+  useEffect(() => {
+    api.get('/auth/me')
+      .then((res) => setUser(res.data.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = async (email, password) => {
+    const res = await api.post('/auth/login', { email, password });
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
+  const register = async (form) => {
+    const res = await api.post('/auth/register', form);
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
+  const logout = async () => {
+    try { await api.post('/auth/logout'); } finally { setUser(null); }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
